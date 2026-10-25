@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Huntsman Ledger",
+      "hasCanvas": false,
+      "bodyTextLen": 1861,
+      "bodyTextHash": "7712f372fc6af85960e99b902f549986d97f6fc961a1b7476b320d03b3549704",
+      "bodyTextPrefix": "ARAKNI, HUNTSMAN Huntsman Ledger Four-card hands, legal lines, a",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Huntsman Ledger",
+      "hasCanvas": false,
+      "bodyTextLen": 1861,
+      "bodyTextHash": "f9047bb79918d1b4b08cd3c2d17fa5f95e9b3ce889f34d93fe7676233e36bebb",
+      "bodyTextPrefix": "ARAKNI, HUNTSMAN Huntsman Ledger Four-card hands, legal lines, a",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
