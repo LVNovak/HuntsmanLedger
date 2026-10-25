@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  talisharCatalog,
+  talisharFormats,
+  talisharHeroes,
+  type TalisharFormat,
+  type TalisharHero,
+} from "@/engine/talishar.functions";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CARDS, SPINE_IDS, WEAPONS, cardById, pitchLabel, weaponById } from "@/engine/cards";
 import { combinationCount } from "@/engine/discover";
@@ -104,6 +111,16 @@ export function LedgerApp() {
   const [marked, setMarked] = useState(false);
   const [incoming, setIncoming] = useState(0);
   const [phaseMode, setPhaseMode] = useState<SearchConfig["phaseMode"]>("action");
+  const [format, setFormat] = useState("cc");
+  const [heroId, setHeroId] = useState("arakni_huntsman");
+  const [formats, setFormats] = useState<TalisharFormat[]>([
+    { id: "cc", name: "Classic Constructed" },
+    { id: "blitz", name: "Blitz" },
+    { id: "sage", name: "Silver Age" },
+  ]);
+  const [heroes, setHeroes] = useState<TalisharHero[]>([]);
+  const [poolNote, setPoolNote] = useState<string | null>(null);
+  const [engineNote, setEngineNote] = useState<string | null>(null);
   const [pool, setPool] = useState<string[]>(SPINE_IDS);
   const [openCard, setOpenCard] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("hands");
@@ -127,8 +144,10 @@ export function LedgerApp() {
       marked,
       incoming,
       phaseMode,
+      format,
+      heroId,
     }),
-    [weights, prior, weaponId, blacktek, mask, flick, marked, incoming, phaseMode],
+    [weights, prior, weaponId, blacktek, mask, flick, marked, incoming, phaseMode, format, heroId],
   );
 
   const ranked = useMemo(() => (result ? withScores(result.hands, weights) : []), [result, weights]);
@@ -224,11 +243,75 @@ export function LedgerApp() {
 
   const lineReport = probe?.report ?? selected;
 
+  useEffect(() => {
+    let cancelled = false;
+    talisharFormats().then((result) => {
+      if (cancelled || !result.ok) {
+        if (!cancelled && !result.ok) setEngineNote(result.error);
+        return;
+      }
+      setFormats(result.data.formats);
+      setEngineNote(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    talisharHeroes({ data: { format } }).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setHeroes([]);
+        setEngineNote(result.error);
+        setPoolNote(null);
+        return;
+      }
+      setEngineNote(null);
+      setHeroes(result.data.heroes);
+      setHeroId((current) => {
+        if (result.data.heroes.some((hero) => hero.heroId === current)) return current;
+        const preferred =
+          format === "cc"
+            ? "arakni_huntsman"
+            : format === "blitz" || format === "sage"
+              ? "arakni"
+              : "";
+        return result.data.heroes.find((hero) => hero.heroId === preferred)?.heroId ?? result.data.heroes[0]?.heroId ?? current;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [format]);
+
+  useEffect(() => {
+    if (!heroId) return;
+    let cancelled = false;
+    talisharCatalog({ data: { format, heroId } }).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setPoolNote(null);
+        return;
+      }
+      const { deck, weapons, equipment } = result.data;
+      setPoolNote(
+        `${deck.length} deck cards, ${weapons.length} weapons, and ${equipment.length} equipment are legal. Ranking still uses the built-in Huntsman model. Talishar is running for legality and one-hand proofs.`,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [format, heroId]);
+
+  const heroName = heroes.find((hero) => hero.heroId === heroId)?.name;
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
-          <p className="text-xs font-medium tracking-widest text-subtle">ARAKNI, HUNTSMAN</p>
+          <p className="text-xs font-medium tracking-widest text-subtle">{heroName ?? "ANY HERO"}</p>
           <h1 className="mt-1 text-4xl font-medium tracking-tight text-fg">Huntsman Ledger</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
             Four-card hands, legal lines, and raw outcomes. The search records what happened. The weights below decide what that is worth.
@@ -246,6 +329,44 @@ export function LedgerApp() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="order-2 flex flex-col gap-3 lg:order-1">
+          <section className="rounded-xl border border-border bg-bg-elevated p-4">
+            <h2 className="text-lg font-medium">Format and hero</h2>
+            <p className="mt-1 text-sm text-muted">Legal heroes come from Talishar. Classic Constructed starts on Arakni, Huntsman. Blitz and Silver Age start on young Arakni when that hero is legal.</p>
+            <label className="mt-3 flex flex-col gap-1 text-sm text-muted">
+              Format
+              <select
+                value={format}
+                onChange={(event) => setFormat(event.target.value)}
+                className="h-11 rounded-md border border-border bg-bg-subtle px-3 text-fg"
+              >
+                {formats.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mt-3 flex flex-col gap-1 text-sm text-muted">
+              Hero
+              <select
+                value={heroId}
+                onChange={(event) => setHeroId(event.target.value)}
+                className="h-11 rounded-md border border-border bg-bg-subtle px-3 text-fg"
+                disabled={heroes.length === 0}
+              >
+                {heroes.length === 0 ? <option value={heroId}>Waiting for Talishar</option> : null}
+                {heroes.map((hero) => (
+                  <option key={hero.heroId} value={hero.heroId}>
+                    {hero.name}
+                    {hero.young ? " (young)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {engineNote ? <p className="mt-3 text-sm text-muted">{engineNote}</p> : null}
+            {poolNote ? <p className="mt-3 text-sm text-muted">{poolNote}</p> : null}
+          </section>
+
           <section className="rounded-xl border border-border bg-bg-elevated p-4">
             <h2 className="text-lg font-medium">Evaluator</h2>
             <p className="mt-1 text-sm text-muted">A hypothesis applied after the line is found. It also breaks ties inside the search.</p>

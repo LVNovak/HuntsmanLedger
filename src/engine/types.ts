@@ -159,6 +159,10 @@ export type SearchConfig = {
   marked: boolean;
   incoming: number;
   phaseMode: PhaseMode;
+  /** Talishar format id, once the local engine is the rules source. */
+  format?: string;
+  /** Talishar hero card id. */
+  heroId?: string;
   nodeBudget: number;
   /** When combination count exceeds this, sample. */
   exhaustCap: number;
